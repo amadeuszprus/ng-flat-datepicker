@@ -1,4 +1,4 @@
-(function(){
+(function () {
 
     'use strict';
 
@@ -6,11 +6,11 @@
      * @desc Dates calculator factory
      */
 
-     angular
-         .module('ngFlatDatepicker')
-         .factory('datesCalculator', datesCalculator);
+    angular
+        .module('ngFlatDatepicker')
+        .factory('datesCalculator', datesCalculator);
 
-    function datesCalculator () {
+    function datesCalculator() {
 
         /**
          * List all years for the select
@@ -28,9 +28,9 @@
          * List all days name in the current locale
          * @return {[type]} [description]
          */
-        function getDaysNames () {
+        function getDaysNames() {
             var daysNameList = [];
-            for (var i = 0; i < 7 ; i++) {
+            for (var i = 0; i < 7; i++) {
                 daysNameList.push(moment().weekday(i).format('ddd'));
             }
             return daysNameList;

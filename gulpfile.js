@@ -1,17 +1,18 @@
 'use strict';
 
-var es   = require('event-stream');
+var es = require('event-stream');
 var gulp = require('gulp');
-var $    = require('gulp-load-plugins')();
+var $ = require('gulp-load-plugins')();
+var connect = require('gulp-connect');
 
 var paths = {
     src: {
-        html: __dirname+'/src/templates/**/*.html',
-        js: __dirname+'/src/js/**/*.js',
-        scss: __dirname+'/src/scss/**/*.scss'
+        html: __dirname + '/src/templates/**/*.html',
+        js: __dirname + '/src/js/**/*.js',
+        scss: __dirname + '/src/scss/**/*.scss'
     },
-    tmp: __dirname+'/.tmp/',
-    dist: __dirname+'/dist/'
+    tmp: __dirname + '/.tmp/',
+    dist: __dirname + '/dist/'
 };
 
 var plumberErrorHandler = {
@@ -21,7 +22,7 @@ var plumberErrorHandler = {
     }
 };
 
-gulp.task('js', function(){
+gulp.task('js', function () {
     return es.merge(getTemplatesStream(), gulp.src(paths.src.js))
         .pipe($.plumber(plumberErrorHandler))
         .pipe($.angularFilesort())
@@ -33,11 +34,11 @@ gulp.task('js', function(){
         .pipe(gulp.dest(paths.dist));
 });
 
-gulp.task('sass', function(){
+gulp.task('sass', function () {
     return gulp.src(paths.src.scss)
         .pipe($.plumber(plumberErrorHandler))
-        .pipe($.sass({ outputStyle: 'expanded' }))
-        .pipe($.autoprefixer({ browsers: ['last 2 versions'] }))
+        .pipe($.sass({outputStyle: 'expanded'}))
+        .pipe($.autoprefixer({browsers: ['last 2 versions']}))
         .pipe($.rename('ng-flat-datepicker.css'))
         .pipe(gulp.dest(paths.dist))
         .pipe($.csso())
@@ -48,13 +49,20 @@ gulp.task('sass', function(){
 /**
  * Watch
  */
-gulp.task('watch', function(){
-    $.watch(paths.src.scss, $.batch(function(events, done){
+gulp.task('watch', ['server'], function () {
+    $.watch(paths.src.scss, $.batch(function (events, done) {
         gulp.start('sass', done);
     }));
-    $.watch([paths.src.js, paths.src.html], $.batch(function(events, done){
+    $.watch([paths.src.js, paths.src.html], $.batch(function (events, done) {
         gulp.start('js', done);
     }));
+});
+
+gulp.task('server', function () {
+    connect.server({
+        root: '',
+        livereload: true
+    });
 });
 
 function getTemplatesStream() {

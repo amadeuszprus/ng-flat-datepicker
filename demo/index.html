@@ -17,7 +17,7 @@
 
             <input type="text" name="date" ng-flat-datepicker datepicker-config="datepickerConfig" ng-model="date">
             or
-            <button ng-flat-datepicker ng-model="date2" type="button" name="button">Pick a date</button>
+            <button ng-flat-datepicker datepicker-config="datepickerConfig" ng-model="date2" type="button" name="button">Pick a date</button>
 
             <p>Ng-model input: {{ date | json }}</p>
             <p>Ng-model button: {{ date2 | json }}</p>

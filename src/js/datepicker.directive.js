@@ -4,7 +4,6 @@
 
     /**
      * @desc Datepicker directive
-     * @example <ng-datepicker></ng-datepicker>
      */
 
     angular
@@ -21,8 +20,10 @@
             link: function (scope, element, attrs, ngModel) {
 
                 var template = angular.element($templateCache.get('datepicker.html'));
+                var backdropTemplate = angular.element($templateCache.get('backdrop.html'));
                 var dateSelected = '';
                 var today = moment.utc();
+                var body = document.getElementsByTagName('body')[0];
 
                 // Default options
                 var defaultConfig = {
@@ -30,7 +31,9 @@
                     dateFormat: null,
                     minDate: null,
                     maxDate: null,
-                    style: {}
+                    style: {},
+                    forceDisplayElement: true,
+                    backdrop: true
                 };
 
                 // Apply and init options
@@ -71,6 +74,7 @@
                 });
 
                 /**
+                 * @deprecated
                  * ClickOutside, handle all clicks outside the DatePicker when visible
                  */
                 element.bind('click', function (e) {
@@ -82,14 +86,19 @@
 
                 function getCoords(elem) {
                     var box = elem[0].getBoundingClientRect();
+                    console.log(elem, elem[0].getBoundingClientRect());
                     return {
                         top: box.top + pageYOffset + elem[0].offsetHeight,
                         left: box.left + pageXOffset
                     };
                 }
 
+                /**
+                 * @deprecated
+                 * Display the previous month in the datepicker
+                 * @return {}
+                 */
                 function onDocumentClick(e) {
-                    console.log('fire event')
                     if (template !== e.target && !template[0].contains(e.target) && e.target !== element[0]) {
                         $document.off('click', onDocumentClick);
                         scope.$apply(function () {
@@ -98,7 +107,6 @@
                         });
                     }
                 }
-
 
                 /**
                  * Display the previous month in the datepicker
@@ -152,27 +160,60 @@
                 };
 
                 $compile(template)(scope);
+                $compile(backdropTemplate)(scope);
 
                 /**
                  * Init the directive
                  * @return {}
                  */
                 function init() {
+                    var target = angular.element(body);
+                    scope.config.style = computeStyle();
+                    target.addClass('ng-flat-datepicker-backdrop-showing');
+                    target.append(template);
+                    target.append(backdropTemplate);
+
+                    if (angular.isDefined(ngModel.$modelValue) && moment.isDate(ngModel.$modelValue) && !scope.calendarCursor) {
+                        scope.$apply(function () {
+                            scope.calendarCursor = ngModel.$modelValue;
+                        })
+                    }
+                }
+
+                function computeStyle(defaults) {
                     var coords = getCoords(element);
-                    console.log(coords)
-                    var target = angular.element(document.getElementsByTagName('body')[0]);
-                    scope.config.style = {
-                        top: coords.top+'px',
-                        left: coords.left+'px',
-                        right:'auto',
-                        bottom: 'auto',
+                    var top = coords.top + 'px';
+                    var bottom = 'auto';
+
+                    if (coords.top + 365 > window.innerHeight && window.innerHeight > 365) {
+                        bottom = 0;
+                        top = 'auto';
+                    }
+
+                    if (scope.config.forceDisplayElement && coords && !coords.top && !coords.left && getComputedStyle(element[0], null).display === 'none') {
+
+                        element.addClass('ng-flat-datepicker-force-display');
+
+                        if (element[0].type && element[0].type === 'hidden') {
+                            element[0].type = undefined
+                        }
+
+                        return defaults ? defaults : computeStyle({
+                            top: top,
+                            left: 0,
+                            right: 'auto',
+                            bottom: bottom,
+                            position: 'absolute'
+                        })
+                    }
+
+                    return {
+                        top: top,
+                        left: coords.left + 'px',
+                        right: 'auto',
+                        bottom: bottom,
                         position: 'absolute'
                     };
-                    target.append(template);
-
-                    if (angular.isDefined(ngModel.$modelValue) && moment.isDate(ngModel.$modelValue)) {
-                        scope.calendarCursor = ngModel.$modelValue;
-                    }
                 }
 
                 /**
@@ -181,9 +222,14 @@
                  */
                 function destroy() {
                     var elements = document.getElementsByClassName('ng-flat-datepicker-wrapper');
+                    var backdrops = document.getElementsByClassName('ng-flat-datepicker-backdrop');
+                    angular.element(body).removeClass('ng-flat-datepicker-backdrop-showing');
 
                     for (var i = 0; i < elements.length; i++) {
                         elements[i].remove();
+                    }
+                    for (var i = 0; i < backdrops.length; i++) {
+                        backdrops[i].remove();
                     }
                 }
 

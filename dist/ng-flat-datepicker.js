@@ -4,7 +4,6 @@
 
     /**
      * @desc Datepicker directive
-     * @example <ng-datepicker></ng-datepicker>
      */
 
     ngFlatDatepickerDirective.$inject = ["$templateCache", "$compile", "$document", "datesCalculator"];
@@ -22,8 +21,10 @@
             link: function (scope, element, attrs, ngModel) {
 
                 var template = angular.element($templateCache.get('datepicker.html'));
+                var backdropTemplate = angular.element($templateCache.get('backdrop.html'));
                 var dateSelected = '';
                 var today = moment.utc();
+                var body = document.getElementsByTagName('body')[0];
 
                 // Default options
                 var defaultConfig = {
@@ -31,7 +32,9 @@
                     dateFormat: null,
                     minDate: null,
                     maxDate: null,
-                    style: {}
+                    style: {},
+                    forceDisplayElement: true,
+                    backdrop: true
                 };
 
                 // Apply and init options
@@ -72,6 +75,7 @@
                 });
 
                 /**
+                 * @deprecated
                  * ClickOutside, handle all clicks outside the DatePicker when visible
                  */
                 element.bind('click', function (e) {
@@ -83,14 +87,19 @@
 
                 function getCoords(elem) {
                     var box = elem[0].getBoundingClientRect();
+                    console.log(elem, elem[0].getBoundingClientRect());
                     return {
                         top: box.top + pageYOffset + elem[0].offsetHeight,
                         left: box.left + pageXOffset
                     };
                 }
 
+                /**
+                 * @deprecated
+                 * Display the previous month in the datepicker
+                 * @return {}
+                 */
                 function onDocumentClick(e) {
-                    console.log('fire event')
                     if (template !== e.target && !template[0].contains(e.target) && e.target !== element[0]) {
                         $document.off('click', onDocumentClick);
                         scope.$apply(function () {
@@ -99,7 +108,6 @@
                         });
                     }
                 }
-
 
                 /**
                  * Display the previous month in the datepicker
@@ -153,27 +161,60 @@
                 };
 
                 $compile(template)(scope);
+                $compile(backdropTemplate)(scope);
 
                 /**
                  * Init the directive
                  * @return {}
                  */
                 function init() {
+                    var target = angular.element(body);
+                    scope.config.style = computeStyle();
+                    target.addClass('ng-flat-datepicker-backdrop-showing');
+                    target.append(template);
+                    target.append(backdropTemplate);
+
+                    if (angular.isDefined(ngModel.$modelValue) && moment.isDate(ngModel.$modelValue) && !scope.calendarCursor) {
+                        scope.$apply(function () {
+                            scope.calendarCursor = ngModel.$modelValue;
+                        })
+                    }
+                }
+
+                function computeStyle(defaults) {
                     var coords = getCoords(element);
-                    console.log(coords)
-                    var target = angular.element(document.getElementsByTagName('body')[0]);
-                    scope.config.style = {
-                        top: coords.top+'px',
-                        left: coords.left+'px',
-                        right:'auto',
-                        bottom: 'auto',
+                    var top = coords.top + 'px';
+                    var bottom = 'auto';
+
+                    if (coords.top + 365 > window.innerHeight && window.innerHeight > 365) {
+                        bottom = 0;
+                        top = 'auto';
+                    }
+
+                    if (scope.config.forceDisplayElement && coords && !coords.top && !coords.left && getComputedStyle(element[0], null).display === 'none') {
+
+                        element.addClass('ng-flat-datepicker-force-display');
+
+                        if (element[0].type && element[0].type === 'hidden') {
+                            element[0].type = undefined
+                        }
+
+                        return defaults ? defaults : computeStyle({
+                            top: top,
+                            left: 0,
+                            right: 'auto',
+                            bottom: bottom,
+                            position: 'absolute'
+                        })
+                    }
+
+                    return {
+                        top: top,
+                        left: coords.left + 'px',
+                        right: 'auto',
+                        bottom: bottom,
                         position: 'absolute'
                     };
-                    target.append(template);
-
-                    if (angular.isDefined(ngModel.$modelValue) && moment.isDate(ngModel.$modelValue)) {
-                        scope.calendarCursor = ngModel.$modelValue;
-                    }
                 }
 
                 /**
@@ -182,9 +223,14 @@
                  */
                 function destroy() {
                     var elements = document.getElementsByClassName('ng-flat-datepicker-wrapper');
+                    var backdrops = document.getElementsByClassName('ng-flat-datepicker-backdrop');
+                    angular.element(body).removeClass('ng-flat-datepicker-backdrop-showing');
 
                     for (var i = 0; i < elements.length; i++) {
                         elements[i].remove();
+                    }
+                    for (var i = 0; i < backdrops.length; i++) {
+                        backdrops[i].remove();
                     }
                 }
 
@@ -295,4 +341,5 @@
 
 })();
 
-angular.module("ngFlatDatepicker").run(["$templateCache", function($templateCache) {$templateCache.put("datepicker.html","<div class=\"ng-flat-datepicker-wrapper\" ng-style=\"config.style\" asdasdasd>\n    <div class=\"ng-flat-datepicker\" ng-show=\"pickerDisplayed\">\n        <div class=\"ng-flat-datepicker-table-header-bckgrnd\"></div>\n        <table>\n            <caption>\n                <div class=\"ng-flat-datepicker-header-wrapper\">\n                    <span class=\"ng-flat-datepicker-arrow ng-flat-datepicker-arrow-left\" ng-click=\"prevMonth()\">\n                        <svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"50\" y=\"50\" viewBox=\"0 0 100 100\" xml:space=\"preserve\">\n                            <polygon points=\"64.8,36.2 35.2,6.5 22.3,19.4 51.9,49.1 22.3,78.8 35.2,91.7 77.7,49.1\" />\n                        </svg>\n                    </span>\n                    <div class=\"ng-flat-datepicker-header-year\">\n                        <div class=\"ng-flat-datepicker-custom-select-box\" outside-click=\"showMonthsList = false\">\n                            <span class=\"ng-flat-datepicker-custom-select-title ng-flat-datepicker-month-name\" ng-click=\"showMonthsList = !showMonthsList; showYearsList = false\" ng-class=\"{selected: showMonthsList }\">{{ calendarCursor.isValid() ? calendarCursor.format(\'MMMM\') : \"\" }}</span>\n                            <div class=\"ng-flat-datepicker-custom-select\" ng-show=\"showMonthsList\">\n                                <span ng-repeat=\"monthName in monthsList\" ng-click=\"selectMonth(monthName); showMonthsList = false\">{{ monthName }}</span>\n                            </div>\n                        </div>\n                        <div class=\"ng-flat-datepicker-custom-select-box\" outside-click=\"showYearsList = false\">\n                            <span class=\"ng-flat-datepicker-custom-select-title\" ng-click=\"showYearsList = !showYearsList; showMonthsList = false\" ng-class=\"{selected: showYearsList }\">{{ calendarCursor.isValid() ? calendarCursor.format(\'YYYY\') : \"\" }}</span>\n                            <div class=\"ng-flat-datepicker-custom-select\" ng-show=\"showYearsList\">\n                                <span ng-repeat=\"yearNumber in yearsList\" ng-click=\"selectYear(yearNumber)\">{{ yearNumber }}</span>\n                            </div>\n                        </div>\n                    </div>\n                    <span class=\"ng-flat-datepicker-arrow ng-flat-datepicker-arrow-right\" ng-click=\"nextMonth()\">\n                        <svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"50\" y=\"50\" viewBox=\"0 0 100 100\" xml:space=\"preserve\">\n                            <polygon points=\"64.8,36.2 35.2,6.5 22.3,19.4 51.9,49.1 22.3,78.8 35.2,91.7 77.7,49.1\" />\n                        </svg>\n                    </span>\n                </div>\n            </caption>\n            <tbody>\n                <tr class=\"days-head\">\n                    <td class=\"day-head\" ng-repeat=\"dayName in daysNameList\">{{ dayName }}</td>\n                </tr>\n                <tr class=\"days\" ng-repeat=\"week in currentWeeks\">\n                    <td ng-repeat=\"day in week\" ng-click=\"selectDay(day)\" ng-class=\"[\'day-item\', { \'isToday\': day.isToday, \'isInMonth\': day.isInMonth, \'isDisabled\': !day.isSelectable, \'isSelected\': day.isSelected }]\">{{ day.date | date:\'dd\' }}</td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>");}]);
+angular.module("ngFlatDatepicker").run(["$templateCache", function($templateCache) {$templateCache.put("backdrop.html","<div class=\"ng-flat-datepicker-backdrop\" ng-click=\"pickerDisplayed=false\">\n\n</div>");
+$templateCache.put("datepicker.html","<div class=\"ng-flat-datepicker-wrapper\" ng-style=\"config.style\">\n    <div class=\"ng-flat-datepicker\" ng-show=\"pickerDisplayed\">\n        <div class=\"ng-flat-datepicker-table-header-bckgrnd\"></div>\n        <table>\n            <caption>\n                <div class=\"ng-flat-datepicker-header-wrapper\">\n                    <span class=\"ng-flat-datepicker-arrow ng-flat-datepicker-arrow-left\" ng-click=\"prevMonth()\">\n                        <svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"50\" y=\"50\" viewBox=\"0 0 100 100\" xml:space=\"preserve\">\n                            <polygon points=\"64.8,36.2 35.2,6.5 22.3,19.4 51.9,49.1 22.3,78.8 35.2,91.7 77.7,49.1\" />\n                        </svg>\n                    </span>\n                    <div class=\"ng-flat-datepicker-header-year\">\n                        <div class=\"ng-flat-datepicker-custom-select-box\" outside-click=\"showMonthsList = false\">\n                            <span class=\"ng-flat-datepicker-custom-select-title ng-flat-datepicker-month-name\" ng-click=\"showMonthsList = !showMonthsList; showYearsList = false\" ng-class=\"{selected: showMonthsList }\">{{ calendarCursor.isValid() ? calendarCursor.format(\'MMMM\') : \"\" }}</span>\n                            <div class=\"ng-flat-datepicker-custom-select\" ng-show=\"showMonthsList\">\n                                <span ng-repeat=\"monthName in monthsList\" ng-click=\"selectMonth(monthName); showMonthsList = false\">{{ monthName }}</span>\n                            </div>\n                        </div>\n                        <div class=\"ng-flat-datepicker-custom-select-box\" outside-click=\"showYearsList = false\">\n                            <span class=\"ng-flat-datepicker-custom-select-title\" ng-click=\"showYearsList = !showYearsList; showMonthsList = false\" ng-class=\"{selected: showYearsList }\">{{ calendarCursor.isValid() ? calendarCursor.format(\'YYYY\') : \"\" }}</span>\n                            <div class=\"ng-flat-datepicker-custom-select\" ng-show=\"showYearsList\">\n                                <span ng-repeat=\"yearNumber in yearsList\" ng-click=\"selectYear(yearNumber)\">{{ yearNumber }}</span>\n                            </div>\n                        </div>\n                    </div>\n                    <span class=\"ng-flat-datepicker-arrow ng-flat-datepicker-arrow-right\" ng-click=\"nextMonth()\">\n                        <svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"50\" y=\"50\" viewBox=\"0 0 100 100\" xml:space=\"preserve\">\n                            <polygon points=\"64.8,36.2 35.2,6.5 22.3,19.4 51.9,49.1 22.3,78.8 35.2,91.7 77.7,49.1\" />\n                        </svg>\n                    </span>\n                </div>\n            </caption>\n            <tbody>\n                <tr class=\"days-head\">\n                    <td class=\"day-head\" ng-repeat=\"dayName in daysNameList\">{{ dayName }}</td>\n                </tr>\n                <tr class=\"days\" ng-repeat=\"week in currentWeeks\">\n                    <td ng-repeat=\"day in week\" ng-click=\"selectDay(day)\" ng-class=\"[\'day-item\', { \'isToday\': day.isToday, \'isInMonth\': day.isInMonth, \'isDisabled\': !day.isSelectable, \'isSelected\': day.isSelected }]\">{{ day.date | date:\'dd\' }}</td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>");}]);

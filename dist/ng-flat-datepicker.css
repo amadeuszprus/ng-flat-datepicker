@@ -1,3 +1,31 @@
+.ng-flat-datepicker-backdrop {
+  min-height: 100vh;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2999;
+}
+
+.ng-flat-datepicker-backdrop-showing {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  max-height: 100%;
+}
+
+.ng-flat-datepicker-force-display {
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  position: absolute !important;
+  z-index: -1 !important;
+}
+
 .ng-flat-datepicker-wrapper {
   display: inline-block;
   position: relative;
